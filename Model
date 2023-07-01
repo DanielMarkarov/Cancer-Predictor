@@ -1,102 +1,33 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": [],
-      "authorship_tag": "ABX9TyP5PD2S+doJ6oijiJKv4qwR",
-      "include_colab_link": true
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "view-in-github",
-        "colab_type": "text"
-      },
-      "source": [
-        "<a href=\"https://colab.research.google.com/github/DanielMarkarov/Cancer-Predictor/blob/main/Model\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": 21,
-      "metadata": {
-        "colab": {
-          "base_uri": "https://localhost:8080/",
-          "height": 232
-        },
-        "id": "9TU9U-Mu_YjY",
-        "outputId": "9d9fc965-5a86-4831-f31d-c2ca4018d2b9"
-      },
-      "outputs": [
-        {
-          "output_type": "error",
-          "ename": "AttributeError",
-          "evalue": "ignored",
-          "traceback": [
-            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
-            "\u001b[0;31mAttributeError\u001b[0m                            Traceback (most recent call last)",
-            "\u001b[0;32m<ipython-input-21-ebd1c800411a>\u001b[0m in \u001b[0;36m<cell line: 30>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     28\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     29\u001b[0m \u001b[0;31m# Create an iterator\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 30\u001b[0;31m \u001b[0miterator\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdataset\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mmake_initializable_iterator\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     31\u001b[0m \u001b[0mnext_element\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0miterator\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_next\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     32\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
-            "\u001b[0;31mAttributeError\u001b[0m: '_BatchDataset' object has no attribute 'make_initializable_iterator'"
-          ]
-        }
-      ],
-      "source": [
-        "import tensorflow as tf\n",
-        "import os\n",
-        "\n",
-        "# Define the file path and column names\n",
-        "file_path = '/Users/danielmarkarov/Desktop/Breast_Cancer_Wisconsin_Dataset.csv'\n",
-        "column_names = ['id', 'diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',\n",
-        "                'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry', 'fractal_dimension_mean',\n",
-        "                'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se',\n",
-        "                'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst',\n",
-        "                'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst',\n",
-        "                'symmetry_worst', 'fractal_dimension_worst']\n",
-        "\n",
-        "# Define data types for each column\n",
-        "data_types = [tf.int32, tf.string] + [tf.float32] * 30\n",
-        "\n",
-        "# Define the batch size\n",
-        "batch_size = 32\n",
-        "\n",
-        "# Create a dataset object using CsvDataset\n",
-        "dataset = tf.data.experimental.CsvDataset(file_path, record_defaults=data_types, header=True, select_cols=list(range(len(column_names))))\n",
-        "\n",
-        "# Perform any required preprocessing steps\n",
-        "# dataset = dataset.map(preprocess_function)\n",
-        "\n",
-        "# Shuffle and batch the dataset\n",
-        "dataset = dataset.shuffle(buffer_size=10000)\n",
-        "dataset = dataset.batch(batch_size)\n",
-        "\n",
-        "# Create an iterator\n",
-        "iterator = dataset.make_initializable_iterator()\n",
-        "next_element = iterator.get_next()\n",
-        "\n",
-        "# Start a session and initialize the iterator\n",
-        "with tf.compat.v1.Session() as sess:\n",
-        "    sess.run(iterator.initializer)\n",
-        "\n",
-        "    # Access data in a loop\n",
-        "    while True:\n",
-        "        try:\n",
-        "            data = sess.run(next_element)\n",
-        "            id_values, diagnosis_values, *feature_values = data\n",
-        "            # Use the data for training or further processing\n",
-        "            # ...\n",
-        "        except tf.errors.OutOfRangeError:\n",
-        "            break"
-      ]
-    }
-  ]
-}
+import tensorflow as tf
+import os
+
+# Define the file path and column names
+file_path = '/relative_file_path/Breast_Cancer_Wisconsin_Dataset.csv'
+column_names = ['id', 'diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
+                'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry', 'fractal_dimension_mean',
+                'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se',
+                'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst',
+                'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst',
+                'symmetry_worst', 'fractal_dimension_worst']
+
+# Define data types for each column
+data_types = [tf.int32, tf.string] + [tf.float32] * 30
+
+# Define the batch size
+batch_size = 569
+
+# Create a dataset object using CsvDataset
+dataset = tf.data.experimental.CsvDataset(file_path, record_defaults=data_types, header=True, select_cols=list(range(len(column_names))))
+print("dataset", dataset)
+
+# Perform any required preprocessing steps
+# dataset = dataset.map(preprocess_function)
+
+# Shuffle and batch the dataset
+dataset = dataset.shuffle(buffer_size=10000).batch(batch_size)
+
+# Iterate over the dataset
+for data in dataset:
+    id_values, diagnosis_values, *feature_values = data
+    # Use the data for training or further processing
+    # ...
