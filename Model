@@ -2,7 +2,10 @@ import tensorflow as tf
 import os
 
 # Define the file path and column names
-file_path = '/relative_file_path/Breast_Cancer_Wisconsin_Dataset.csv'
+repository = "DanielMarkarov/Cancer-Predictor"
+file_path = '/main/Breast_Cancer_Wisconsin_Dataset.csv'
+link = f"https://raw.Githubusercontent.com/{repository}/{file_path}"
+
 column_names = ['id', 'diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
                 'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry', 'fractal_dimension_mean',
                 'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se',
@@ -17,7 +20,7 @@ data_types = [tf.int32, tf.string] + [tf.float32] * 30
 batch_size = 569
 
 # Create a dataset object using CsvDataset
-dataset = tf.data.experimental.CsvDataset(file_path, record_defaults=data_types, header=True, select_cols=list(range(len(column_names))))
+dataset = tf.data.experimental.CsvDataset(link, record_defaults=data_types, header=True, select_cols=list(range(len(column_names))))
 print("dataset", dataset)
 
 # Perform any required preprocessing steps
