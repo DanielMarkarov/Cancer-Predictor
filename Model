@@ -67,6 +67,10 @@ def classification_model(model, data, predictors, outcome):
   #Perform k-fold cross-validation with 5 folds
   kf = KFold(n_splits=5, shuffle=False, random_state=None)
   error = []
+
+  #***** Used to error on this loop that it couldn't iterate through a KFold
+  #previously: for train, test in kf
+  #changed it to iterate through df bc traindf/testdf already perform splits but unsure if that was the right move
   for train, test in df:
     # Filter training data
     train_predictors = (data[predictors].iloc[train])
