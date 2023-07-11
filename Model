@@ -65,15 +65,15 @@ def classification_model(model, data, predictors, outcome):
   accuracy = metrics.accuracy_score(predictions,data[outcome])
   print("Accuracy : %s" % "{0:.3%}".format(accuracy))
   #Perform k-fold cross-validation with 5 folds
-  kf = KFold(n_splits=5, shuffle=False, random_state=None)
+  kf = KFold(n_splits=5)  
   error = []
 
   #***** Used to error on this loop that it couldn't iterate through a KFold
   #previously: for train, test in kf
   #changed it to iterate through df bc traindf/testdf already perform splits but unsure if that was the right move
-  for train, test in df:
+  for train, test in kf.split(traindf):
     # Filter training data
-    train_predictors = (data[predictors].iloc[train])
+    train_predictors = (data[predictors].iloc[train,:])
 
     # The target we're using to train the algorithm.
     train_target = data[outcome].iloc[train]
@@ -90,30 +90,32 @@ def classification_model(model, data, predictors, outcome):
   #Fit the model again so that it can be refered outside the function:
   model.fit(data[predictors],data[outcome])
 predictor_var = ['radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
-                'compactness_mean', 'concavity_mean', 'concave_points_mean']
+                'compactness_mean', 'concavity_mean']
 outcome_var='diagnosis'
+print("Logistic Regression Model:")
 model=LogisticRegression()
 classification_model(model,traindf,predictor_var,outcome_var)
 
 #Decision Tree model
+print("Decision Tree Model:")
 predictor_var = ['radius_mean','perimeter_mean','area_mean','compactness_mean','concave points_mean']
 outcome_var='diagnosis'
 model = DecisionTreeClassifier()
 classification_model(model,traindf,predictor_var,outcome_var)
 
 #Randome Forest model
+print("Randome Forest Model:")
 predictor_var = features_mean
 model = RandomForestClassifier(n_estimators=100,min_samples_split=25, max_depth=7, max_features=2)
 classification_model(model, traindf,predictor_var,outcome_var)
 
 #Create a series with feature importances from the randome forest
+print("Feature Importance Series from Randome Forest:")
 featimp = pd.Series(model.feature_importances_, index=predictor_var).sort_values(ascending=False)
 print(featimp)
 
 # Randome forest classifier model using series data
+print("Random Forest Classifier Model:")
 predictor_var = ['concave points_mean','area_mean','radius_mean','perimeter_mean','concavity_mean',]
 model = RandomForestClassifier(n_estimators=100, min_samples_split=25, max_depth=7, max_features=2)
 classification_model(model,traindf,predictor_var,outcome_var)
-
-
-
