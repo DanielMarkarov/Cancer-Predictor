@@ -91,8 +91,25 @@ outcome_var='diagnosis'
 model=LogisticRegression()
 classification_model(model,traindf,predictor_var,outcome_var)
 
-  #Decision Tree model
+#Decision Tree model
 predictor_var = ['radius_mean','perimeter_mean','area_mean','compactness_mean','concave points_mean']
 outcome_var='diagnosis'
 model = DecisionTreeClassifier()
 classification_model(model,traindf,predictor_var,outcome_var)
+
+#Randome Forest model
+predictor_var = features_mean
+model = RandomForestClassifier(n_estimators=100,min_samples_split=25, max_depth=7, max_features=2)
+classification_model(model, traindf,predictor_var,outcome_var)
+
+#Create a series with feature importances from the randome forest
+featimp = pd.Series(model.feature_importances_, index=predictor_var).sort_values(ascending=False)
+print(featimp)
+
+# Randome forest classifier model using series data
+predictor_var = ['concave points_mean','area_mean','radius_mean','perimeter_mean','concavity_mean',]
+model = RandomForestClassifier(n_estimators=100, min_samples_split=25, max_depth=7, max_features=2)
+classification_model(model,traindf,predictor_var,outcome_var)
+
+
+
