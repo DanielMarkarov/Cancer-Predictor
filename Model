@@ -1,36 +1,98 @@
-import tensorflow as tf
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import os
+# keeps the plots in one place. calls image as static pngs
+import matplotlib.pyplot as plt # side-stepping mpl backend
+import matplotlib.gridspec as gridspec # subplots
+#import mpld3 as mpl
 
-# Define the file path and column names
-repository = "DanielMarkarov/Cancer-Predictor"
-file_path = '/main/Breast_Cancer_Wisconsin_Dataset.csv'
-link = f"https://raw.Githubusercontent.com/{repository}/{file_path}"
+#Import models from scikit learn module:
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import KFold   #For K-fold cross validation
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
+from sklearn import metrics
 
-column_names = ['id', 'diagnosis', 'radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
-                'compactness_mean', 'concavity_mean', 'concave_points_mean', 'symmetry', 'fractal_dimension_mean',
-                'radius_se', 'texture_se', 'perimeter_se', 'area_se', 'smoothness_se', 'compactness_se', 'concavity_se',
-                'concave_points_se', 'symmetry_se', 'fractal_dimension_se', 'radius_worst', 'texture_worst', 'perimeter_worst',
-                'area_worst', 'smoothness_worst', 'compactness_worst', 'concavity_worst', 'concave_points_worst',
-                'symmetry_worst', 'fractal_dimension_worst']
+filepath ="/Users/danielmarkarov/Desktop/Breast_Cancer_Wisconsin_Dataset.csv"
+df = pd.read_csv (filepath,encoding = "ISO-8859-1")
+df.head()
+df.drop('Unnamed: 32',axis=1,inplace=True)
+# size of the dataframe
+len(df)
+df.diagnosis.unique()
 
-# Define data types for each column
-data_types = [tf.int32, tf.string] + [tf.float32] * 30
+df['diagnosis'] = df['diagnosis'].map({'M':1,'B':0})
+df.head()
 
-# Define the batch size
-batch_size = 569
+df.describe()
 
-# Create a dataset object using CsvDataset
-dataset = tf.data.experimental.CsvDataset(link, record_defaults=data_types, header=True, select_cols=list(range(len(column_names))))
-print("dataset", dataset)
+df.describe()
+plt.hist(df['diagnosis'])
+plt.title('Diagnosis (M=1 , B=0)')
+plt.show()
 
-# Perform any required preprocessing steps
-# dataset = dataset.map(preprocess_function)
+features_mean=list(df.columns[1:11])
+# split dataframe into two based on diagnosis
+dfM=df[df['diagnosis'] ==1]
+dfB=df[df['diagnosis'] ==0]
 
-# Shuffle and batch the dataset
-dataset = dataset.shuffle(buffer_size=10000).batch(batch_size)
+#Stack the data
+plt.rcParams.update({'font.size': 8})
+fig, axes = plt.subplots(nrows=5, ncols=2, figsize=(8,10))
+axes = axes.ravel()
+for idx,ax in enumerate(axes):
+    ax.figure
+    binwidth= (max(df[features_mean[idx]]) - min(df[features_mean[idx]]))/50
+    ax.hist([dfM[features_mean[idx]],dfB[features_mean[idx]]], bins=np.arange(min(df[features_mean[idx]]), max(df[features_mean[idx]]) + binwidth, binwidth) , alpha=0.5,stacked=True, density = True, label=['M','B'],color=['r','g'])
+    ax.legend(loc='upper right')
+    ax.set_title(features_mean[idx])
+plt.tight_layout()
+plt.show()
 
-# Iterate over the dataset
-for data in dataset:
-    id_values, diagnosis_values, *feature_values = data
-    # Use the data for training or further processing
-    # ...
+traindf, testdf = train_test_split(df, test_size = 0.3)
+
+#Generic function for making a classification model and accessing the performance.
+# From AnalyticsVidhya tutorial
+def classification_model(model, data, predictors, outcome):
+  #Fit the model:
+  model.fit(data[predictors],data[outcome])
+
+  #Make predictions on training set:
+  predictions = model.predict(data[predictors])
+
+  #Print accuracy
+  accuracy = metrics.accuracy_score(predictions,data[outcome])
+  print("Accuracy : %s" % "{0:.3%}".format(accuracy))
+  #Perform k-fold cross-validation with 5 folds
+  kf = KFold(n_splits=5, shuffle=False, random_state=None)
+  error = []
+  for train, test in df:
+    # Filter training data
+    train_predictors = (data[predictors].iloc[train])
+
+    # The target we're using to train the algorithm.
+    train_target = data[outcome].iloc[train]
+
+    # Training the algorithm using the predictors and target.
+    model.fit(train_predictors, train_target)
+
+    #Record error from each cross-validation run
+    error.append(model.score(data[predictors].iloc[test,:], data[outcome].iloc[test]))
+
+    print("Cross-Validation Score : %s" % "{0:.3%}".format(np.mean(error)))
+
+#Creating a logistic regression model
+  #Fit the model again so that it can be refered outside the function:
+  model.fit(data[predictors],data[outcome])
+predictor_var = ['radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
+                'compactness_mean', 'concavity_mean', 'concave_points_mean']
+outcome_var='diagnosis'
+model=LogisticRegression()
+classification_model(model,traindf,predictor_var,outcome_var)
+
+  #Decision Tree model
+predictor_var = ['radius_mean','perimeter_mean','area_mean','compactness_mean','concave points_mean']
+outcome_var='diagnosis'
+model = DecisionTreeClassifier()
+classification_model(model,traindf,predictor_var,outcome_var)
