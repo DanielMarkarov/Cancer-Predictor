@@ -14,7 +14,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn import metrics
 
-filepath ="/Users/danielmarkarov/Desktop/Breast_Cancer_Wisconsin_Dataset.csv"
+filepath ="/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/Breast_Cancer_Wisconsin_Dataset.csv"
 df = pd.read_csv (filepath,encoding = "ISO-8859-1")
 df.head()
 df.drop('Unnamed: 32',axis=1,inplace=True)
@@ -53,7 +53,6 @@ plt.show()
 traindf, testdf = train_test_split(df, test_size = 0.3)
 
 #Generic function for making a classification model and accessing the performance.
-# From AnalyticsVidhya tutorial
 def classification_model(model, data, predictors, outcome):
   #Fit the model:
   model.fit(data[predictors],data[outcome])
@@ -68,9 +67,6 @@ def classification_model(model, data, predictors, outcome):
   kf = KFold(n_splits=5)  
   error = []
 
-  #***** Used to error on this loop that it couldn't iterate through a KFold
-  #previously: for train, test in kf
-  #changed it to iterate through df bc traindf/testdf already perform splits but unsure if that was the right move
   for train, test in kf.split(traindf):
     # Filter training data
     train_predictors = (data[predictors].iloc[train,:])
@@ -86,36 +82,81 @@ def classification_model(model, data, predictors, outcome):
 
     print("Cross-Validation Score : %s" % "{0:.3%}".format(np.mean(error)))
 
-#Creating a logistic regression model
   #Fit the model again so that it can be refered outside the function:
   model.fit(data[predictors],data[outcome])
-predictor_var = ['radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean', 'smoothness_mean',
-                'compactness_mean', 'concavity_mean']
+
+#Logistic regression model - 1 var
+print()
+print("Logistic Regression Model with One Variable:")
+predictor_var = ['radius_mean']
 outcome_var='diagnosis'
-print("Logistic Regression Model:")
 model=LogisticRegression()
 classification_model(model,traindf,predictor_var,outcome_var)
 
-#Decision Tree model
-print("Decision Tree Model:")
+#Logistic regression model - 5 var
+print()
+print("Logistic Regression Model with 5 Variables:")
+predictor_var = ['radius_mean','perimeter_mean','area_mean','compactness_mean','concave points_mean']
+outcome_var='diagnosis'
+model=LogisticRegression()
+classification_model(model,traindf,predictor_var,outcome_var)
+
+#Logistic regression model - all var
+print()
+print("Logistic Regression Model with 5 Variables:")
+predictor_var = features_mean
+outcome_var='diagnosis'
+model=LogisticRegression()
+classification_model(model,traindf,predictor_var,outcome_var)
+
+#Decision Tree model - 1 var
+print()
+print("Decision Tree Model with One Variable:")
+predictor_var = ['radius_mean']
+outcome_var='diagnosis'
+model = DecisionTreeClassifier()
+classification_model(model,traindf,predictor_var,outcome_var)
+
+#Decision Tree model - 5 var
+print()
+print("Decision Tree Model with 5 Variables:")
 predictor_var = ['radius_mean','perimeter_mean','area_mean','compactness_mean','concave points_mean']
 outcome_var='diagnosis'
 model = DecisionTreeClassifier()
 classification_model(model,traindf,predictor_var,outcome_var)
 
-#Randome Forest model
-print("Randome Forest Model:")
+#Decision Tree model - all var
+print()
+print("Decision Tree Model with All Variables:")
+predictor_var = features_mean
+outcome_var='diagnosis'
+model = DecisionTreeClassifier()
+classification_model(model,traindf,predictor_var,outcome_var)
+
+# Randome forest classifier model - 1 var
+print()
+print("Random Forest Classifier Model with One Variable:")
+predictor_var = ['radius_mean']
+model = RandomForestClassifier(n_estimators=100, min_samples_split=25, max_depth=7, max_features=2)
+classification_model(model,traindf,predictor_var,outcome_var)
+
+# Randome forest classifier model - 5 var
+print()
+print("Random Forest Classifier Model with 5 Variables:")
+predictor_var = ['concave points_mean','area_mean','radius_mean','perimeter_mean','concavity_mean',]
+model = RandomForestClassifier(n_estimators=100, min_samples_split=25, max_depth=7, max_features=2)
+classification_model(model,traindf,predictor_var,outcome_var)
+
+#Randome Forest Classifier model - all var
+print()
+print("Randome Forest Model with all Variables:")
 predictor_var = features_mean
 model = RandomForestClassifier(n_estimators=100,min_samples_split=25, max_depth=7, max_features=2)
 classification_model(model, traindf,predictor_var,outcome_var)
 
+
 #Create a series with feature importances from the randome forest
+print()
 print("Feature Importance Series from Randome Forest:")
 featimp = pd.Series(model.feature_importances_, index=predictor_var).sort_values(ascending=False)
 print(featimp)
-
-# Randome forest classifier model using series data
-print("Random Forest Classifier Model:")
-predictor_var = ['concave points_mean','area_mean','radius_mean','perimeter_mean','concavity_mean',]
-model = RandomForestClassifier(n_estimators=100, min_samples_split=25, max_depth=7, max_features=2)
-classification_model(model,traindf,predictor_var,outcome_var)
