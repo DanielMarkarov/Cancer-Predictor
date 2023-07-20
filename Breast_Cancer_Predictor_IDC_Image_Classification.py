@@ -35,21 +35,22 @@ run_training = False
 retrain = False
 find_learning_rate = False
 
-files = listdir("/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/breast-histopathology-images/")
+
+files = listdir("/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/inputs/breast-histopathology-images/")
 print(len(files))
 files[0:10]
-base_path = "/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/breast-histopathology-images/"
+base_path = "/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/inputs/breast-histopathology-images/"
 folder = listdir(base_path)
 len(folder)
-
 total_images = 0
 for n in range(len(folder)):
     patient_id = folder[n]
-    for c in [0, 1]:
-        patient_path = base_path + patient_id 
-        class_path = patient_path + "/" + str(c) + "/"
-        subfiles = listdir(class_path)
-        total_images += len(subfiles)
+    if (patient_id != ".DS_Store"):
+        for c in [0, 1]:
+            patient_path = base_path + patient_id 
+            class_path = patient_path + "/" + str(c) + "/"
+            subfiles = listdir(class_path)
+            total_images += len(subfiles)
 total_images
 
 data = pd.DataFrame(index=np.arange(0, total_images), columns=["patient_id", "path", "target"])
@@ -57,21 +58,22 @@ data = pd.DataFrame(index=np.arange(0, total_images), columns=["patient_id", "pa
 k = 0
 for n in range(len(folder)):
     patient_id = folder[n]
-    patient_path = base_path + patient_id 
-    for c in [0,1]:
-        class_path = patient_path + "/" + str(c) + "/"
-        subfiles = listdir(class_path)
-        for m in range(len(subfiles)):
-            image_path = subfiles[m]
-            data.iloc[k]["path"] = class_path + image_path
-            data.iloc[k]["target"] = c
-            data.iloc[k]["patient_id"] = patient_id
-            k += 1  
+    if (patient_id != ".DS_Store"):
+        patient_path = base_path + patient_id 
+        for c in [0,1]:
+            class_path = patient_path + "/" + str(c) + "/"
+            subfiles = listdir(class_path)
+            for m in range(len(subfiles)):
+                image_path = subfiles[m]
+                data.iloc[k]["path"] = class_path + image_path
+                data.iloc[k]["target"] = c
+                data.iloc[k]["patient_id"] = patient_id
+                k += 1  
 
 data.head()
 data.shape
 
-data.target = data.target.astype(np.int)
+data.target = data.target.astype(int)
 
 pos_selection = np.random.choice(data[data.target==1].index.values, size=50, replace=False)
 neg_selection = np.random.choice(data[data.target==0].index.values, size=50, replace=False)
@@ -96,8 +98,8 @@ def extract_coords(df):
     coord = df.path.str.rsplit("_", n=4, expand=True)
     coord = coord.drop([0, 1, 4], axis=1)
     coord = coord.rename({2: "x", 3: "y"}, axis=1)
-    coord.loc[:, "x"] = coord.loc[:,"x"].str.replace("x", "", case=False).astype(np.int)
-    coord.loc[:, "y"] = coord.loc[:,"y"].str.replace("y", "", case=False).astype(np.int)
+    coord.loc[:, "x"] = coord.loc[:,"x"].str.replace("x", "", case=False).astype(int)
+    coord.loc[:, "y"] = coord.loc[:,"y"].str.replace("y", "", case=False).astype(int)
     df.loc[:, "x"] = coord.x.values
     df.loc[:, "y"] = coord.y.values
     return df
@@ -108,18 +110,18 @@ def get_cancer_dataframe(patient_id, cancer_id):
     dataframe = pd.DataFrame(files, columns=["filename"])
     path_names = path + "/" + dataframe.filename.values
     dataframe = dataframe.filename.str.rsplit("_", n=4, expand=True)
-    dataframe.loc[:, "target"] = np.int(cancer_id)
+    dataframe.loc[:, "target"] = int(cancer_id)
     dataframe.loc[:, "path"] = path_names
     dataframe = dataframe.drop([0, 1, 4], axis=1)
     dataframe = dataframe.rename({2: "x", 3: "y"}, axis=1)
-    dataframe.loc[:, "x"] = dataframe.loc[:,"x"].str.replace("x", "", case=False).astype(np.int)
-    dataframe.loc[:, "y"] = dataframe.loc[:,"y"].str.replace("y", "", case=False).astype(np.int)
+    dataframe.loc[:, "x"] = dataframe.loc[:,"x"].str.replace("x", "", case=False).astype(int)
+    dataframe.loc[:, "y"] = dataframe.loc[:,"y"].str.replace("y", "", case=False).astype(int)
     return dataframe
 
 def get_patient_dataframe(patient_id):
     df_0 = get_cancer_dataframe(patient_id, "0")
     df_1 = get_cancer_dataframe(patient_id, "1")
-    patient_df = df_0.append(df_1)
+    patient_df = pd.concat([df_0, df_1])
     return patient_df
 
 example = get_patient_dataframe(data.patient_id.values[0])
@@ -144,7 +146,7 @@ def visualise_breast_tissue(patient_id, pred_df=None):
     mask = 255*np.ones(shape = (max_point[0] + 50, max_point[1] + 50, 3)).astype(np.uint8)
     if pred_df is not None:
         patient_df = pred_df[pred_df.patient_id == patient_id].copy()
-    mask_proba = np.zeros(shape = (max_point[0] + 50, max_point[1] + 50, 1)).astype(np.float)
+    mask_proba = np.zeros(shape = (max_point[0] + 50, max_point[1] + 50, 1)).astype(float)
     
     broken_patches = []
     for n in range(len(example_df)):
@@ -153,8 +155,8 @@ def visualise_breast_tissue(patient_id, pred_df=None):
             
             target = example_df.target.values[n]
             
-            x_coord = np.int(example_df.x.values[n])
-            y_coord = np.int(example_df.y.values[n])
+            x_coord = int(example_df.x.values[n])
+            y_coord = int(example_df.y.values[n])
             x_start = x_coord - 1
             y_start = y_coord - 1
             x_end = x_start + 50
@@ -169,11 +171,10 @@ def visualise_breast_tissue(patient_id, pred_df=None):
                 
                 proba = patient_df[
                     (patient_df.x==x_coord) & (patient_df.y==y_coord)].proba
-                mask_proba[y_start:y_end, x_start:x_end, 0] = np.float(proba)
+                mask_proba[y_start:y_end, x_start:x_end, 0] = float(proba)
 
         except ValueError:
-            broken_patches.append(example_df.path.values[n])
-
+            pd.concat([broken_patches, example_df.path.values[n]])
     return grid, mask, broken_patches, mask_proba
 
 example = "13616"
@@ -195,14 +196,14 @@ broken_patches
 BATCH_SIZE = 32
 NUM_CLASSES = 2
 OUTPUT_PATH = ""
-MODEL_PATH = "../input/breastcancermodel/"
-LOSSES_PATH = "../input/breastcancermodel/"
+MODEL_PATH = "/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/models/"
+LOSSES_PATH = "/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/LOSSES/"
 
 torch.manual_seed(0)
 np.random.seed(0)
 
 data.head()
-data.loc[:, "target"] = data.target.astype(np.str)
+data.loc[:, "target"] = data.target.astype(str)
 data.info()
 patients = data.patient_id.unique()
 train_ids, sub_test_ids = train_test_split(patients,
@@ -221,12 +222,15 @@ train_df = extract_coords(train_df)
 test_df = extract_coords(test_df)
 dev_df = extract_coords(dev_df)
 
+print("df.target", dev_df.target)
+print("train_df", train_df.target)
+
 fig, ax = plt.subplots(1,3,figsize=(20,5))
 sns.countplot(train_df.target, ax=ax[0], palette="Reds")
 ax[0].set_title("Train data")
-sns.countplot(dev_df.target, ax=ax[1], palette="Blues")
+#sns.countplot(dev_df.target, ax=ax[1], palette="Blues")
 ax[1].set_title("Dev data")
-sns.countplot(test_df.target, ax=ax[2], palette="Greens");
+#sns.countplot(test_df.target, ax=ax[2], palette="Greens");
 ax[2].set_title("Test data")
 
 def my_transform(key="train", plot=False):
@@ -260,7 +264,7 @@ class BreastCancerDataset(Dataset):
         if self.transform:
             image = self.transform(image)
         if "target" in self.states.columns.values:
-            target = np.int(self.states.target.values[idx])
+            target = int(self.states.target.values[idx])
         else:
             target = None
         return {"image": image,
@@ -305,7 +309,7 @@ device
 
 model = torchvision.models.resnet18(pretrained=False)
 if run_training:
-    model.load_state_dict(torch.load("../input/pretrained-pytorch-models/resnet18-5c106cde.pth"))
+    model.load_state_dict_from_url(torch.load("/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/models/resnet18-5c106cde.pth"))
 num_features = model.fc.in_features
 print(num_features)
 
@@ -362,7 +366,7 @@ def get_lr_search_scheduler(optimizer, min_lr, max_lr, max_iterations):
 
 def get_scheduler(optimiser, min_lr, max_lr, stepsize):
     # suggested_stepsize = 2*num_iterations_within_epoch
-    stepsize_up = np.int(stepsize/2)
+    stepsize_up = int(stepsize/2)
     scheduler = torch.optim.lr_scheduler.CyclicLR(optimizer=optimiser,
                                                base_lr=min_lr,
                                                max_lr=max_lr,
@@ -382,11 +386,11 @@ if find_learning_rate:
     find_lr_df.loc[:, "lr"] = lr_find_lr
     find_lr_df.to_csv("learning_rate_search.csv", index=False)
 else:
-    find_lr_df = pd.read_csv(MODEL_PATH + "learning_rate_search.csv")
+    find_lr_df = pd.read_csv(MODEL_PATH + "learning_rate_search.csv", engine='python', encoding='latin1', sep='delimiter', header=None)
 
     fig, ax = plt.subplots(1,2,figsize=(20,5))
-ax[0].plot(find_lr_df.lr.values)
-ax[1].plot(find_lr_df["smoothed loss"].values)
+#ax[0].plot(find_lr_df.values)
+#ax[1].plot(find_lr_df["smoothed loss"].values)
 ax[0].set_xlabel("Steps")
 ax[0].set_ylabel("Learning rate")
 ax[1].set_xlabel("Steps")
@@ -395,7 +399,7 @@ ax[0].set_title("How the learning rate increases during search")
 ax[1].set_title("How the training loss evolves during search")
 
 plt.figure(figsize=(20,5))
-plt.plot(find_lr_df.lr.values, find_lr_df["smoothed loss"].values, '-', color="tomato");
+#plt.plot(find_lr_df.lr.values, find_lr_df["smoothed loss"].values, '-', color="tomato");
 plt.xlabel("Learning rate")
 plt.xscale("log")
 plt.ylabel("Smoothed Loss")
@@ -421,12 +425,12 @@ if run_training:
     losses_df = pd.DataFrame(loss_dict["train"],columns=["train"])
     losses_df.loc[:, "dev"] = loss_dict["dev"]
     losses_df.loc[:, "test"] = loss_dict["test"]
-    losses_df.to_csv("losses_breastcancer.csv", index=False)
+    losses_df.to_csv("losses_breastcancer.numbers", index=False)
     
     running_losses_df = pd.DataFrame(running_loss_dict["train"], columns=["train"])
     running_losses_df.loc[0:len(running_loss_dict["dev"])-1, "dev"] = running_loss_dict["dev"]
     running_losses_df.loc[0:len(running_loss_dict["test"])-1, "test"] = running_loss_dict["test"]
-    running_losses_df.to_csv("running_losses_breastcancer.csv", index=False)
+    running_losses_df.to_csv("losses_breastcancer.numbers", index=False)
 else:
     if device == "cpu":
         load_path = MODEL_PATH + ".pth"
@@ -435,8 +439,8 @@ else:
     model.load_state_dict(torch.load(load_path, map_location='cpu'))
     model.eval()
     
-    losses_df = pd.read_csv(LOSSES_PATH + "losses_breastcancer.csv")
-    running_losses_df = pd.read_csv(LOSSES_PATH + "running_losses_breastcancer.csv")
+    losses_df = pd.read_csv(LOSSES_PATH + "losses_breastcancer.numbers", engine='python', encoding='latin1', sep='delimiter', header=None)
+    running_losses_df = pd.read_csv(LOSSES_PATH + "running_losses_breastcancer.csv", engine='python', encoding='latin1', sep='delimiter', header=None)
 
 plt.figure(figsize=(20,5))
 
@@ -482,10 +486,10 @@ def evaluate_model(model, predictions_df, key):
             
             outputs = model(inputs)
             _, preds = torch.max(outputs, 1)
-            proba = outputs.cpu().numpy().astype(np.float)
+            proba = outputs.cpu().numpy().astype(float)
             predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "proba"] = sigmoid(proba[:, 1])
-            predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "true"] = data["label"].numpy().astype(np.int)
-            predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "predicted"] = preds.cpu().numpy().astype(np.int)
+            predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "true"] = data["label"].numpy().astype(int)
+            predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "predicted"] = preds.cpu().numpy().astype(int)
             predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "x"] = data["x"].numpy()
             predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "y"] = data["y"].numpy()
             predictions_df.loc[i*BATCH_SIZE:(i+1)*BATCH_SIZE-1, "patient_id"] = data["patient_id"]
@@ -504,7 +508,7 @@ if run_training:
 else:
     dev_predictions = pd.read_csv(LOSSES_PATH + "dev_predictions.csv")
     test_predictions = pd.read_csv(LOSSES_PATH + "test_predictions.csv")
-    dev_predictions.patient_id = dev_predictions.patient_id.astype(np.str)
+    dev_predictions.patient_id = dev_predictions.patient_id.astype(str)
 fig, ax = plt.subplots(3,3,figsize=(20,20))
 
 for n in range(3):
@@ -527,11 +531,11 @@ for n in range(3):
 
 dev_predictions.head()
 fig, ax = plt.subplots(1,3,figsize=(20,5))
-sns.countplot(dev_predictions.true.astype(np.float), ax=ax[0], palette="Reds_r")
+sns.countplot(dev_predictions.true.astype(float), ax=ax[0], palette="Reds_r")
 ax[0].set_title("Target counts of dev data");
-sns.distplot(dev_predictions.proba.astype(np.float), ax=ax[1], kde=False, color="tomato")
+sns.distplot(dev_predictions.proba.astype(float), ax=ax[1], kde=False, color="tomato")
 ax[0].set_title("Predicted probability of cancer in dev");
-sns.distplot(test_predictions.proba.astype(np.float), ax=ax[2], kde=False, color="mediumseagreen");
+sns.distplot(test_predictions.proba.astype(float), ax=ax[2], kde=False, color="mediumseagreen");
 ax[2].set_title("Predicted probability of cancer in test");
 
 from sklearn.metrics import confusion_matrix
