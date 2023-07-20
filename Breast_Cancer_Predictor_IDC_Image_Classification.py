@@ -190,7 +190,7 @@ for m in range(2):
     ax[m].set_xlabel("y-coord")
     ax[m].set_ylabel("y-coord")
 ax[0].set_title("Breast tissue slice of patient: " + patient_id)
-ax[1].set_title("Cancer tissue colored red \n of patient: " + patient_id)
+ax[1].set_title("Cancer tissue colored red \n of patient: " + patient_id);
 broken_patches
 
 BATCH_SIZE = 32
@@ -222,8 +222,9 @@ train_df = extract_coords(train_df)
 test_df = extract_coords(test_df)
 dev_df = extract_coords(dev_df)
 
-print("df.target", dev_df.target)
 print("train_df", train_df.target)
+print("dev_df", dev_df.target)
+print("test_df", test_df.target)
 
 fig, ax = plt.subplots(1,3,figsize=(20,5))
 sns.countplot(train_df.target, ax=ax[0], palette="Reds")
@@ -350,6 +351,117 @@ def f1_score(preds, targets):
     f1_score = 2 * precision * recall/(precision + recall + epsilon)
     return f1_score
 
+def train_loop(model, criterion, optimizer, lr_find=False, scheduler=None, num_epochs = 3, lam=0.0):
+    since = time.time()
+    if lr_find:
+        phases = ["train"]
+    else:
+        phases = ["train", "dev", "test"]
+    
+    best_model_wts = copy.deepcopy(model.state_dict())
+    best_acc = 0.0
+    
+    loss_dict = {"train": [], "dev": [], "test": []}
+    lam_tensor = torch.tensor(lam, device=device)
+    
+    running_loss_dict = {"train": [], "dev": [], "test": []}
+    
+    lr_find_loss = []
+    lr_find_lr = []
+    smoothing = 0.2
+    
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 10)
+        
+        for phase in phases:
+            if phase == "train":
+                model.train()
+            else:
+                model.eval()
+
+            running_loss = 0.0
+            running_corrects = 0
+            
+            tk0 = tqdm(dataloaders[phase], total=int(len(dataloaders[phase])))
+
+            counter = 0
+            for bi, d in enumerate(tk0):
+                inputs = d["image"]
+                labels = d["label"]
+                inputs = inputs.to(device, dtype=torch.float)
+                labels = labels.to(device, dtype=torch.long)
+                
+                # zero the parameter gradients
+                optimizer.zero_grad()
+                
+                # forward
+                # track history if only in train
+                
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = model(inputs)
+                    _, preds = torch.max(outputs, 1)
+                    loss = criterion(outputs, labels)
+                
+                    # backward + optimize only if in training phase
+                    if phase == 'train':
+                        loss.backward()
+                        
+                        #l2_reg = torch.tensor(0., device=device)
+                        #for param in model.parameters():
+                            #l2_reg = lam_tensor * torch.norm(param)
+                        
+                        #loss += l2_reg
+            
+                        optimizer.step()
+                        # cyclical lr schedule is invoked after each batch
+                        if scheduler is not None:
+                            scheduler.step() 
+                            if lr_find:
+                                lr_step = optimizer.state_dict()["param_groups"][0]["lr"]
+                                lr_find_lr.append(lr_step)
+                                if counter==0:
+                                    lr_find_loss.append(loss.item())
+                                else:
+                                    smoothed_loss = smoothing  * loss.item() + (1 - smoothing) * lr_find_loss[-1]
+                                    lr_find_loss.append(smoothed_loss)
+                            
+                # statistics
+                running_loss += loss.item() * inputs.size(0)
+                running_corrects += torch.sum(preds == labels.data)                      
+     
+                counter += 1
+                
+                
+                tk0.set_postfix({'loss': running_loss / (counter * dataloaders[phase].batch_size),
+                                 'accuracy': running_corrects.double() / (counter * dataloaders[phase].batch_size)})
+                running_loss_dict[phase].append(running_loss / (counter * dataloaders[phase].batch_size))
+                
+            epoch_loss = running_loss / dataset_sizes[phase]
+            loss_dict[phase].append(epoch_loss)
+            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                phase, epoch_loss, epoch_acc))
+            
+            # deep copy the model
+            if phase == 'dev' and epoch_acc > best_acc:
+                best_acc = epoch_acc
+                best_model_wts = copy.deepcopy(model.state_dict())
+        print()
+        
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(
+    time_elapsed // 60, time_elapsed % 60))
+    print('Best val Acc: {:4f}'.format(best_acc))              
+    
+    # load best model weights
+    model.load_state_dict(best_model_wts)
+    results = {"model": model,
+               "loss_dict": loss_dict,
+               "running_loss_dict": running_loss_dict,
+               "lr_find": {"lr": lr_find_lr, "loss": lr_find_loss}}
+    return results
+
 start_lr = 1e-6
 end_lr = 0.1
 
@@ -384,13 +496,13 @@ if find_learning_rate:
     
     find_lr_df = pd.DataFrame(lr_find_loss, columns=["smoothed loss"])
     find_lr_df.loc[:, "lr"] = lr_find_lr
-    find_lr_df.to_csv("learning_rate_search.csv", index=False)
+    find_lr_df.to_csv("learning_rate_search.csv.numbers", index=False)
 else:
-    find_lr_df = pd.read_csv(MODEL_PATH + "learning_rate_search.csv", engine='python', encoding='latin1', sep='delimiter', header=None)
+    find_lr_df = pd.read_csv(MODEL_PATH + "learning_rate_search.csv.numbers", engine='python', encoding='latin1', sep='delimiter', header=None)
 
-    fig, ax = plt.subplots(1,2,figsize=(20,5))
-#ax[0].plot(find_lr_df.values)
-#ax[1].plot(find_lr_df["smoothed loss"].values)
+fig, ax = plt.subplots(1,2,figsize=(20,5))
+ax[0].plot(find_lr_df.values) #errors here - unhashable type: 'numpy.ndarray'
+ax[1].plot(find_lr_df["smoothed loss"].values) #errors here
 ax[0].set_xlabel("Steps")
 ax[0].set_ylabel("Learning rate")
 ax[1].set_xlabel("Steps")
@@ -399,7 +511,7 @@ ax[0].set_title("How the learning rate increases during search")
 ax[1].set_title("How the training loss evolves during search")
 
 plt.figure(figsize=(20,5))
-#plt.plot(find_lr_df.lr.values, find_lr_df["smoothed loss"].values, '-', color="tomato");
+plt.plot(find_lr_df.values, find_lr_df["smoothed loss"].values, '-', color="tomato") #errors here - KeyError: 'smoothed loss'
 plt.xlabel("Learning rate")
 plt.xscale("log")
 plt.ylabel("Smoothed Loss")
@@ -446,7 +558,7 @@ plt.figure(figsize=(20,5))
 
 plt.plot(losses_df["train"], '-o', label="train")
 plt.plot(losses_df["dev"], '-o', label="dev")
-plt.plot(losses_df["test"], '-o', label="dev")
+plt.plot(losses_df["test"], '-o', label="test")
 plt.xlabel("Epoch")
 plt.ylabel("Weighted x-entropy")
 plt.title("Loss change over epoch")
