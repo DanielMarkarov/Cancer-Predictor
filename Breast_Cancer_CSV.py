@@ -15,6 +15,7 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn import metrics
 
 filepath ="/Users/danielmarkarov/Desktop/Polygence_Datasets/Breast_Cancer/Breast_Cancer_Wisconsin_Dataset.csv"
+Git_File_Path = "Dataset/Breast_Cancer_Wisconsin_Dataset.csv" #New file path through git. Not implemented
 df = pd.read_csv (filepath,encoding = "ISO-8859-1")
 df.head()
 df.drop('Unnamed: 32',axis=1,inplace=True)
